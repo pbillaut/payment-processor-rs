@@ -1,0 +1,23 @@
+[package]
+name = "payment-processor"
+version = "0.1.0"
+edition = "2021"
+authors = ["Patrice Billaut"]
+description = "A simple toy payment processor."
+license = "MIT"
+repository = "https://github.com/pbillaut/payment-processor-rs"
+keywords = ["experiment", "payment-processor"]
+categories = ["finance", "parser-implementations"]
+
+[dependencies]
+clap = { version = "4.5.17", features = ["derive"] }
+csv = "1.3.0"
+serde = { version = "1.0.210", features = ["derive"] }
+thiserror = "1.0.63"
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+
+[dev-dependencies]
+criterion = { version = "0.5.1", features = ["html_reports"] }
+test-log = { version = "0.2.16", features = ["trace"] }
+
