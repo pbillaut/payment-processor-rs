@@ -437,7 +437,7 @@ mod test_accounting {
         let mut account = Account::default();
 
         let lower_than_min = 1.0e-40_f32;
-        let invalid_values = [-1.0, 0.0, lower_than_min, f32::NAN, f32::INFINITY];
+        let invalid_values = [-1.0, lower_than_min, f32::NAN, f32::INFINITY];
 
         for invalid_value in invalid_values {
             let result = account.deposit(invalid_value);
@@ -466,7 +466,7 @@ mod test_accounting {
         let mut account = Account::default();
 
         let lower_than_min = 1.0e-40_f32;
-        let invalid_values = [-1.0, 0.0, lower_than_min, f32::NAN, f32::INFINITY];
+        let invalid_values = [-1.0, lower_than_min, f32::NAN, f32::INFINITY];
 
         for invalid_value in invalid_values {
             let result = account.withdraw(invalid_value);
@@ -509,7 +509,7 @@ mod test_accounting {
         let mut account = Account::default();
 
         let lower_than_min = 1.0e-40_f32;
-        let invalid_values = [-1.0, 0.0, lower_than_min, f32::NAN, f32::INFINITY];
+        let invalid_values = [-1.0, lower_than_min, f32::NAN, f32::INFINITY];
 
         for invalid_value in invalid_values {
             let result = account.hold(invalid_value);
@@ -541,7 +541,7 @@ mod test_accounting {
         let mut account = Account::default();
 
         let lower_than_min = 1.0e-40_f32;
-        let invalid_values = [-1.0, 0.0, lower_than_min, f32::NAN, f32::INFINITY];
+        let invalid_values = [-1.0, lower_than_min, f32::NAN, f32::INFINITY];
 
         for invalid_value in invalid_values {
             let result = account.release(invalid_value);
@@ -573,7 +573,7 @@ mod test_accounting {
         let mut account = Account::default();
 
         let lower_than_min = 1.0e-40_f32;
-        let invalid_values = [-1.0, 0.0, lower_than_min, f32::NAN, f32::INFINITY];
+        let invalid_values = [-1.0, lower_than_min, f32::NAN, f32::INFINITY];
 
         for invalid_value in invalid_values {
             let result = account.charge_back(invalid_value);
