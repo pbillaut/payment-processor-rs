@@ -191,22 +191,53 @@ impl Account {
 }
 
 #[cfg(test)]
-mod test_utils {
+pub mod test_utils {
     use super::Account;
+    use crate::transaction::{Transaction, TransactionID};
     use crate::ClientID;
     use std::collections::HashMap;
 
+    pub enum LockStatus {
+        Locked,
+        Unlocked,
+    }
+
+    impl Account {
+        pub fn with_values(
+            client_id: ClientID,
+            available: f32,
+            held: f32,
+            total: f32,
+            lock_status: LockStatus,
+            transaction_record: HashMap<TransactionID, Transaction>,
+            dispute_cases: HashMap<TransactionID, f32>,
+        ) -> Self {
+            Self {
+                client_id,
+                held,
+                available,
+                total,
+                locked: match lock_status {
+                    LockStatus::Locked => true,
+                    LockStatus::Unlocked => false,
+                },
+                transaction_record,
+                dispute_cases,
+            }
+        }
+    }
+
     impl Default for Account {
         fn default() -> Self {
-            Self {
-                client_id: ClientID::default(),
-                held: 0.0,
-                available: 0.0,
-                total: 0.0,
-                locked: false,
-                transaction_record: HashMap::new(),
-                dispute_cases: HashMap::new(),
-            }
+            Self::with_values(
+                ClientID::default(),
+                0.0,
+                0.0,
+                0.0,
+                LockStatus::Unlocked,
+                HashMap::new(),
+                HashMap::new(),
+            )
         }
     }
 }
