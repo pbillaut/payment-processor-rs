@@ -1,7 +1,9 @@
+mod processor;
 mod deserialize;
 mod writer;
 pub mod reader;
 
+pub use processor::CsvProcessor;
 use std::io;
 use thiserror::Error;
 
