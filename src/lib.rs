@@ -8,9 +8,10 @@
 use std::fmt::{Display, Formatter};
 use std::hash::Hash;
 
+pub mod account;
 pub mod account_activity;
-pub mod transaction;
 pub mod dispute;
+pub mod transaction;
 
 /// A globally unique client ID.
 #[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq, Eq, Clone, Copy, Hash, Default)]
