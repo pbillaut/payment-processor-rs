@@ -12,6 +12,7 @@ pub mod account;
 pub mod account_activity;
 pub mod dispute;
 pub mod processor;
+pub mod processors;
 pub mod transaction;
 
 /// A globally unique client ID.
