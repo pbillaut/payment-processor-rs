@@ -1,4 +1,5 @@
 mod deserialize;
+mod writer;
 pub mod reader;
 
 use std::io;
