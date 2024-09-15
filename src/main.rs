@@ -1,7 +1,7 @@
+use anyhow::Context;
 use clap::{Parser, ValueHint};
 use payment_processor::processor::Processor;
-use payment_processor::processors::detect_processor;
-use std::error::Error;
+use payment_processor::processors::csv::CsvProcessor;
 use std::{fs::File, io, path::PathBuf};
 use tracing_subscriber::EnvFilter;
 
@@ -15,14 +15,15 @@ struct Cli {
     path: PathBuf,
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), anyhow::Error> {
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::ERROR)
         .with_env_filter(EnvFilter::from_default_env())
         .init();
-    let cli = Cli::parse();
 
-    let processor = detect_processor(&cli.path);
-    let file = File::open(&cli.path)?;
-    Ok(processor.process(file, io::stdout())?)
+    let cli = Cli::parse();
+    let file = File::open(&cli.path).context("unable to open file input file")?;
+
+    let mut processor = CsvProcessor::try_new(file, io::stdout())?;
+    processor.process().context("processing input file failed")
 }

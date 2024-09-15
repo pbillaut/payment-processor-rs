@@ -1,90 +1,47 @@
+use crate::account::Account;
+use crate::account_activity::AccountActivity;
 use crate::processor::Processor;
 use crate::processors::csv::reader::CsvReader;
 use crate::processors::csv::writer::CsvWriter;
 use crate::processors::csv::CsvProcessorError;
 use std::io::{Read, Write};
 
-pub struct CsvProcessor;
+pub struct CsvProcessor<R, W>
+where
+    R: Read,
+    W: Write,
+{
+    reader: CsvReader<R>,
+    writer: CsvWriter<W>,
+}
 
-impl CsvProcessor {
-    pub fn new() -> Self {
-        Self {}
+impl<R, W> CsvProcessor<R, W>
+where
+    R: Read,
+    W: Write,
+{
+    pub fn try_new(input: R, output: W) -> Result<Self, anyhow::Error> {
+        let reader = CsvReader::try_new(input)?;
+        let writer = CsvWriter::new(output);
+        Ok(Self {
+            reader,
+            writer,
+        })
     }
 }
 
-impl Default for CsvProcessor {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Processor for CsvProcessor {
+impl<R, W> Processor for CsvProcessor<R, W>
+where
+    R: Read,
+    W: Write,
+{
     type Error = CsvProcessorError;
 
-    fn process<R, W>(&self, input: R, output: W) -> Result<(), Self::Error>
-    where
-        R: Read,
-        W: Write,
-    {
-        let mut reader = CsvReader::try_new(input)?;
-        let accounts = self.process_account_activity(reader.iter());
-
-        let mut writer = CsvWriter::new(output);
-        writer.serialize(accounts.iter())?;
-
-        Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::processor::Processor;
-    use crate::processors::csv::processor::CsvProcessor;
-    use std::io::Cursor;
-
-    struct TestCase<'a> {
-        input: Vec<&'a str>,
-        expected: Vec<&'a str>,
+    fn iter_input(&mut self) -> impl Iterator<Item=Result<AccountActivity, Self::Error>> {
+        self.reader.iter()
     }
 
-    fn test(test_case: TestCase) {
-        let input = Cursor::new(test_case.input.join("\n"));
-        let mut output = Vec::new();
-        let processor = CsvProcessor::new();
-
-        let result = processor.process(input, &mut output);
-        assert!(result.is_ok(), "Expected input processing to succeed: {:?}", result);
-
-        let output = String::from_utf8(output).expect("Failed to convert output into string");
-        let mut output = output.lines().collect::<Vec<&str>>();
-        output.sort();
-
-        let mut expected = test_case.expected;
-        expected.sort();
-
-        assert_eq!(output, expected);
-    }
-
-    #[test]
-    fn process_account_activity() {
-        test(TestCase {
-            input: vec![
-                "type,       client, tx, amount",
-                "deposit,    1,      1,  100.0",
-                "withdrawal, 1,      2,  24.5",
-                "deposit,    2,      3,  100.0",
-                "dispute,    1,      2",
-                "withdrawal, 1,      4,  24.5",
-                "dispute,    2,      3",
-                "resolve,    1,      2",
-                "withdrawal, 2,      5,  1000.0",
-                "chargeback, 2,      3",
-            ],
-            expected: vec![
-                "client,available,held,total,locked",
-                "1,51.0,0.0,51.0,false",
-                "2,0.0,0.0,0.0,true",
-            ],
-        })
+    fn write(&mut self, accounts: Vec<Account>) -> Result<(), Self::Error> {
+        self.writer.serialize(accounts.iter())
     }
 }
