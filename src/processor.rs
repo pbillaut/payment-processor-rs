@@ -20,7 +20,9 @@ pub trait Processor {
         let mut accounts = HashMap::new();
         for transaction in activities {
             match transaction {
-                Err(err) => error!("error parsing account activity {:?}", err),
+                Err(err) => {
+                    error!(error = ?err, "error parsing account activity record")
+                }
                 Ok(transaction) => {
                     let account = accounts
                         .entry(transaction.client_id())
