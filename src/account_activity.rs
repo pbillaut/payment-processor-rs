@@ -1,6 +1,7 @@
 use crate::dispute::DisputeCase;
 use crate::transaction::{Transaction, TransactionID};
 use crate::ClientID;
+use std::fmt::{Display, Formatter};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -115,5 +116,18 @@ impl AccountActivity {
             AccountActivity::Resolve(transaction) => transaction.client_id(),
             AccountActivity::Chargeback(transaction) => transaction.client_id(),
         }
+    }
+}
+
+impl Display for AccountActivity {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let kind = match self {
+            AccountActivity::Deposit(_) => "deposit",
+            AccountActivity::Withdrawal(_) => "withdrawal",
+            AccountActivity::Dispute(_) => "dispute",
+            AccountActivity::Resolve(_) => "resolve",
+            AccountActivity::Chargeback(_) => "chargeback",
+        };
+        write!(f, "{}", kind)
     }
 }
