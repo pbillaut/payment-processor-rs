@@ -1,4 +1,5 @@
-use crate::{open_file, read_file, ParseResult, SCENARIOS};
+use crate::util::{open_file, read_file};
+use crate::{ParseResult, SCENARIOS};
 use criterion::{black_box, criterion_group, BenchmarkId, Criterion};
 use payment_processor::processors::csv::reader::CsvReader;
 use std::fs::File;
