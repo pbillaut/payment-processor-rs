@@ -4,8 +4,8 @@ use std::collections::HashMap;
 use std::error::Error;
 use tracing::warn;
 
-// TODO: This fn is public to be able to benchmark it. This should probably be handled with a bench 
-//       feature instead.
+// TODO: This fn is public to be able to benchmark it. This should better be handled with a
+//       bench-feature instead.
 pub fn process_activities<I, E>(activities: I) -> Vec<Account>
 where
     E: Error,
@@ -36,13 +36,19 @@ where
     accounts.into_values().collect()
 }
 
+/// The processor handles reading account activity records from a source, processing these activities,
+/// and generating account balances as the output.
 pub trait Processor {
     type Error: Error;
 
+    /// Returns an iterator over the parsed records of the input data.
     fn iter_input(&mut self) -> impl Iterator<Item=Result<AccountActivity, Self::Error>>;
 
+    /// Takes a vector of accounts and serializes it into the output format.
     fn write(&mut self, accounts: Vec<Account>) -> Result<(), Self::Error>;
 
+    /// Processes the [`AccountActivity`] data supplied by [`Processor::iter_input`] and generates
+    /// account balance data that is serialized by [`Processor::write`].
     fn process(&mut self) -> Result<(), Self::Error> {
         let activity_records = self.iter_input();
         let accounts = process_activities(activity_records);

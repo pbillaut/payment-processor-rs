@@ -13,8 +13,8 @@ impl Display for TransactionID {
 }
 
 /// A transaction is a financial activity or event where a value is exchanged between two parties.
-/// In the context of banking or finance, it refers to any movement of funds involving accounts,
-/// typically involving deposits, withdrawals, transfers, or payments.
+/// In the context of finance, it refers to any movement of funds involving accounts, typically 
+/// involving deposits, withdrawals, transfers, or payments.
 #[derive(serde::Deserialize, Debug, PartialEq, Clone, Copy)]
 pub struct Transaction {
     #[serde(rename = "tx")]

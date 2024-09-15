@@ -8,6 +8,40 @@ use rust_decimal_macros::dec;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
+/// An abstraction over the balances of a client.
+///
+/// The only way of interacting with the account is through [`AccountActivity`] events supplied via
+/// [`Account::transaction`].
+///
+/// # Balances
+///
+/// An account manages the following balances:
+///
+/// | Type      | Description                                                                |
+/// |-----------|----------------------------------------------------------------------------|
+/// | available | Accessible for transactions like withdrawals, purchases, or transfers.     |
+/// | held      | Temporarily unavailable due to pending transactions, deposits, or disputes |
+/// | total     | Full balance in the account, including both the available and held funds   |
+///
+/// # Security
+///
+/// ## Transactions
+///
+/// For auditing purposes, all [transactions] are logged, even in cases where the transaction
+/// ultimately fails. This ensures that failed transactions are not retried with altered payloads.
+/// If a transaction fails once, it will be recorded alongside its ID and thus not executed again.
+///
+/// ## Disputes
+///
+/// A [dispute case](crate::dispute::DisputeCase) must follow all required steps in the process.
+/// [Resolutions] and [chargebacks] are only processed if the corresponding transaction has been
+/// properly disputed beforehand.
+///
+/// Disputes for non-existent transactions are silently ignored.
+///
+/// [transactions]: crate::transaction::Transaction
+/// [Resolutions]: crate::account_activity::AccountActivity::Resolve
+/// [chargebacks]: crate::account_activity::AccountActivity::Chargeback
 #[derive(Debug, PartialEq, serde::Serialize)]
 pub struct Account {
     #[serde(rename = "client")]
@@ -45,22 +79,18 @@ impl Account {
         self.client_id
     }
 
-    /// Returns the total funds that are available.
     pub fn available(&self) -> Decimal {
         self.available
     }
 
-    /// Returns the total funds that disputed.
     pub fn held(&self) -> Decimal {
         self.held
     }
 
-    /// Returns the total funds that are [`available`](Self::available) or [`held`](Self::held).
     pub fn total(&self) -> Decimal {
         self.total
     }
 
-    /// Returns whether the account is locked.
     pub fn is_locked(&self) -> bool {
         self.locked
     }
@@ -165,15 +195,6 @@ impl Account {
     }
 
     /// Process an account activity, which could either be a transaction or a dispute activity.
-    ///
-    /// # Security
-    /// For auditing purposes, all [transactions](crate::transaction::Transaction) are logged, even
-    /// in cases where the transaction ultimately fails. This ensures that failed transactions are
-    /// not retried with altered payloads. If a transaction fails once, it will be recorded
-    /// alongside its ID and thus not executed again.
-    ///
-    /// [Dispute cases](crate::dispute::DisputeCase) are logged temporarily and retained only until
-    /// they are fully resolved.
     pub fn transaction(&mut self, activity: AccountActivity) -> AccountActivityResult<()> {
         if self.is_locked() {
             return Err(FailedTransaction("account locked".into()));

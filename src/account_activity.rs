@@ -27,6 +27,8 @@ pub enum AccountActivityError {
 
 pub type AccountActivityResult<T> = Result<T, AccountActivityError>;
 
+/// Account activities are events that influence an [`Account`]s balance. These events could either 
+/// be [`Transaction`]s or [`DisputeCase`]s.
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum AccountActivity {
     /// A [`Transaction`] where funds are added to an account, increasing the available and total

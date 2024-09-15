@@ -1,3 +1,9 @@
+//! A custom [`Deserialize`](serde::de::Deserialize) implementation that allows CSV records of
+//! varying lengths to be deserialized into an enum of structs, addressing the limitation that the
+//! [`csv`](csv) crate does currently not support this.
+//!
+//! For more details, see [this issue](https://github.com/BurntSushi/rust-csv/issues/211).
+//!
 use crate::account_activity::AccountActivity;
 use crate::dispute::DisputeCase;
 use crate::transaction::Transaction;
