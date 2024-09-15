@@ -82,6 +82,7 @@ mod tests {
     use crate::processors::csv::CsvProcessorResult;
     use crate::transaction::TransactionID;
     use crate::ClientID;
+    use rust_decimal_macros::dec;
 
     struct TestCase<'a> {
         input: Vec<&'a str>,
@@ -138,13 +139,13 @@ mod tests {
                 "withdrawal, 1,      3,  100.0",
             ],
             expected: vec![
-                AccountActivity::deposit(TransactionID(1), ClientID(1), 100.0),
-                AccountActivity::deposit(TransactionID(2), ClientID(2), 100.0),
+                AccountActivity::deposit(TransactionID(1), ClientID(1), dec!(100.0)),
+                AccountActivity::deposit(TransactionID(2), ClientID(2), dec!(100.0)),
                 AccountActivity::dispute(TransactionID(1), ClientID(1)),
                 AccountActivity::dispute(TransactionID(2), ClientID(2)),
                 AccountActivity::resolve(TransactionID(1), ClientID(1)),
                 AccountActivity::chargeback(TransactionID(2), ClientID(2)),
-                AccountActivity::withdrawal(TransactionID(3), ClientID(1), 100.0),
+                AccountActivity::withdrawal(TransactionID(3), ClientID(1), dec!(100.0)),
             ],
         })
     }
@@ -159,9 +160,9 @@ mod tests {
                 "withdrawal, 1,      3,  4.2",
             ],
             expected: vec![
-                AccountActivity::deposit(TransactionID(1), ClientID(1), 8.0),
-                AccountActivity::withdrawal(TransactionID(2), ClientID(1), 1.5),
-                AccountActivity::withdrawal(TransactionID(3), ClientID(1), 4.2),
+                AccountActivity::deposit(TransactionID(1), ClientID(1), dec!(8.0)),
+                AccountActivity::withdrawal(TransactionID(2), ClientID(1), dec!(1.5)),
+                AccountActivity::withdrawal(TransactionID(3), ClientID(1), dec!(4.2)),
             ],
         })
     }

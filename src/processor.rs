@@ -59,6 +59,7 @@ mod tests {
     use crate::processor::tests::DummyError::ParseError;
     use crate::transaction::TransactionID;
     use crate::ClientID;
+    use rust_decimal_macros::dec;
     use thiserror::Error;
 
     #[derive(Error, Debug, Clone)]
@@ -91,22 +92,22 @@ mod tests {
                     Ok(AccountActivity::deposit(
                         TransactionID(1),
                         ClientID::default(),
-                        10.0
+                        dec!(10.0)
                     )),
                     // The next record couldn't be parsed
                     Err(ParseError),
                     Ok(AccountActivity::withdrawal(
                         TransactionID(2),
                         ClientID::default(),
-                        5.0
+                        dec!(5.0)
                     ))
                 ],
                 expected: vec![
                     Account::with_values(
                         ClientID::default(),
-                        5.0,
-                        0.0,
-                        5.0,
+                        dec!(5.0),
+                        dec!(0.0),
+                        dec!(5.0),
                         LockStatus::Unlocked
                     )
                 ],
@@ -122,26 +123,26 @@ mod tests {
                     Ok(AccountActivity::deposit(
                         TransactionID(1),
                         ClientID::default(),
-                        10.0
+                        dec!(10.0)
                     )),
                     // The next activity should cause an insufficient funds error
                     Ok(AccountActivity::withdrawal(
                         TransactionID::default(),
                         ClientID::default(),
-                        15.0
+                        dec!(15.0)
                     )),
                     Ok(AccountActivity::withdrawal(
                         TransactionID(2),
                         ClientID::default(),
-                        10.0
+                        dec!(10.0)
                     )),
                 ],
                 expected: vec![
                     Account::with_values(
                         ClientID::default(),
-                        0.0,
-                        0.0,
-                        0.0,
+                        dec!(0.0),
+                        dec!(0.0),
+                        dec!(0.0),
                         LockStatus::Unlocked
                     )
                 ],

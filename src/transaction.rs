@@ -1,4 +1,5 @@
 use crate::ClientID;
+use rust_decimal::Decimal;
 use std::fmt::{Display, Formatter};
 
 /// A globally unique transaction ID.
@@ -22,11 +23,11 @@ pub struct Transaction {
     #[serde(rename = "client")]
     client_id: ClientID,
 
-    amount: f32,
+    amount: Decimal,
 }
 
 impl Transaction {
-    pub fn new(id: TransactionID, client_id: ClientID, amount: f32) -> Self {
+    pub fn new(id: TransactionID, client_id: ClientID, amount: Decimal) -> Self {
         Self { id, client_id, amount }
     }
 
@@ -38,7 +39,7 @@ impl Transaction {
         self.client_id
     }
 
-    pub fn amount(&self) -> f32 {
+    pub fn amount(&self) -> Decimal {
         self.amount
     }
 }
