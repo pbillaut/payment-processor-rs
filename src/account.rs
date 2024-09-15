@@ -83,7 +83,7 @@ impl Account {
         if !is_valid_amount(amount) {
             Err(InvalidTransaction("withdrawal amount must be a positive number".into()))
         } else if amount > self.available {
-            Err(FailedTransaction("withdrawal failed: insufficient funds".into()))
+            Err(FailedTransaction("withdrawal failed because of insufficient funds".into()))
         } else {
             self.available -= amount;
             self.total -= amount;
