@@ -46,6 +46,10 @@ impl Account {
         }
     }
 
+    pub fn client_id(&self) -> ClientID {
+        self.client_id
+    }
+
     /// Returns the total funds that are available.
     pub fn available(&self) -> f32 {
         self.available
