@@ -23,15 +23,17 @@ pub trait Processor {
                 Err(err) => {
                     error!(error = ?err, "error parsing account activity record")
                 }
-                Ok(transaction) => {
+                Ok(activity) => {
                     let account = accounts
-                        .entry(transaction.client_id())
-                        .or_insert_with(|| Account::new(transaction.client_id()));
-                    if let Err(err) = account.transaction(transaction) {
+                        .entry(activity.client_id())
+                        .or_insert_with(|| Account::new(activity.client_id()));
+                    if let Err(err) = account.transaction(activity) {
                         warn!(
-                            transaction.id = %transaction.transaction_id(),
-                            client.id = %transaction.client_id(),
-                            "error processing account activity: {}",err
+                            activity = %activity,
+                            transaction.id = %activity.transaction_id(),
+                            client.id = %activity.client_id(),
+                            error = ?err,
+                            "error processing account activity",
                         );
                     }
                 }
