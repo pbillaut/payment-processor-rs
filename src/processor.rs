@@ -2,7 +2,7 @@ use crate::account::Account;
 use crate::account_activity::AccountActivity;
 use std::collections::HashMap;
 use std::error::Error;
-use tracing::warn;
+use tracing::debug;
 
 // TODO: This fn is public to be able to benchmark it. This should better be handled with a
 //       bench-feature instead.
@@ -15,14 +15,14 @@ where
     for account_activity in activities {
         match account_activity {
             Err(err) => {
-                warn!(error = ?err, "error parsing account activity record")
+                debug!(error = ?err, "error parsing account activity record")
             }
             Ok(activity) => {
                 let account = accounts
                     .entry(activity.client_id())
                     .or_insert_with(|| Account::new(activity.client_id()));
                 if let Err(err) = account.transaction(activity) {
-                    warn!(
+                    debug!(
                             activity = %activity,
                             transaction.id = %activity.transaction_id(),
                             client.id = %activity.client_id(),
