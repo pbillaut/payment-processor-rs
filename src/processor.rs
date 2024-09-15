@@ -15,7 +15,7 @@ where
     for account_activity in activities {
         match account_activity {
             Err(err) => {
-                error!(error = ?err, "error parsing account activity record")
+                warn!(error = ?err, "error parsing account activity record")
             }
             Ok(activity) => {
                 let account = accounts
