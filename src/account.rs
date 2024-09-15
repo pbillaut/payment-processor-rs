@@ -8,13 +8,6 @@ use rust_decimal_macros::dec;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
-/// A valid amount is neither negative (including -0.0), infinite, [subnormal] nor NaN.
-///
-/// [subnormal]: https://en.wikipedia.org/wiki/Denormal_number
-fn is_valid_amount(amount: Decimal) -> bool {
-    amount.is_sign_positive()
-}
-
 #[derive(Debug, PartialEq, serde::Serialize)]
 pub struct Account {
     #[serde(rename = "client")]
@@ -77,16 +70,17 @@ impl Account {
     }
 
     fn deposit(&mut self, amount: Decimal) -> AccountActivityResult<()> {
-        if !is_valid_amount(amount) {
-            return Err(InvalidTransaction("deposit amount must be a positive number".into()));
+        if amount.is_sign_negative() {
+            Err(InvalidTransaction("deposit amount must be a positive number".into()))
+        } else {
+            self.available += amount;
+            self.total += amount;
+            Ok(())
         }
-        self.available += amount;
-        self.total += amount;
-        Ok(())
     }
 
     fn withdraw(&mut self, amount: Decimal) -> AccountActivityResult<()> {
-        if !is_valid_amount(amount) {
+        if amount.is_sign_negative() {
             Err(InvalidTransaction("withdrawal amount must be a positive number".into()))
         } else if amount > self.available {
             Err(FailedTransaction("withdrawal failed because of insufficient funds".into()))
@@ -98,7 +92,7 @@ impl Account {
     }
 
     fn hold(&mut self, amount: Decimal) -> AccountActivityResult<()> {
-        if !is_valid_amount(amount) {
+        if amount.is_sign_negative() {
             Err(InvalidTransaction("hold amount must be a positive number".into()))
         } else {
             self.available -= amount;
@@ -108,7 +102,7 @@ impl Account {
     }
 
     fn release(&mut self, amount: Decimal) -> AccountActivityResult<()> {
-        if !is_valid_amount(amount) {
+        if amount.is_sign_negative() {
             Err(InvalidTransaction("release amount must be a positive number".into()))
         } else {
             self.held -= amount;
@@ -118,7 +112,7 @@ impl Account {
     }
 
     fn charge(&mut self, amount: Decimal) -> AccountActivityResult<()> {
-        if !is_valid_amount(amount) {
+        if amount.is_sign_negative() {
             Err(InvalidTransaction("chargeback amount must be a positive number".into()))
         } else {
             self.held -= amount;
