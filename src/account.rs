@@ -3,14 +3,16 @@ use crate::account_activity::AccountActivityError::{FailedDisputeCase, FailedTra
 use crate::account_activity::AccountActivityResult;
 use crate::transaction::{Transaction, TransactionID};
 use crate::ClientID;
+use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
 /// A valid amount is neither negative (including -0.0), infinite, [subnormal] nor NaN.
 ///
 /// [subnormal]: https://en.wikipedia.org/wiki/Denormal_number
-fn is_valid_amount(amount: f32) -> bool {
-    amount == 0.0 || amount.is_normal() && amount.is_sign_positive()
+fn is_valid_amount(amount: Decimal) -> bool {
+    amount.is_sign_positive()
 }
 
 #[derive(Debug, PartialEq, serde::Serialize)]
@@ -18,16 +20,16 @@ pub struct Account {
     #[serde(rename = "client")]
     client_id: ClientID,
 
-    available: f32,
+    available: Decimal,
 
-    held: f32,
+    held: Decimal,
 
-    total: f32,
+    total: Decimal,
 
     locked: bool,
 
     #[serde(skip)]
-    dispute_cases: HashMap<TransactionID, f32>,
+    dispute_cases: HashMap<TransactionID, Decimal>,
 
     #[serde(skip)]
     transaction_record: HashMap<TransactionID, Transaction>,
@@ -37,9 +39,9 @@ impl Account {
     pub fn new(client_id: ClientID) -> Self {
         Self {
             client_id,
-            held: 0.0,
-            total: 0.0,
-            available: 0.0,
+            held: dec!(0.0),
+            total: dec!(0.0),
+            available: dec!(0.0),
             locked: false,
             dispute_cases: HashMap::new(),
             transaction_record: HashMap::new(),
@@ -51,17 +53,17 @@ impl Account {
     }
 
     /// Returns the total funds that are available.
-    pub fn available(&self) -> f32 {
+    pub fn available(&self) -> Decimal {
         self.available
     }
 
     /// Returns the total funds that disputed.
-    pub fn held(&self) -> f32 {
+    pub fn held(&self) -> Decimal {
         self.held
     }
 
     /// Returns the total funds that are [`available`](Self::available) or [`held`](Self::held).
-    pub fn total(&self) -> f32 {
+    pub fn total(&self) -> Decimal {
         self.total
     }
 
@@ -74,7 +76,7 @@ impl Account {
         self.locked = true;
     }
 
-    fn deposit(&mut self, amount: f32) -> AccountActivityResult<()> {
+    fn deposit(&mut self, amount: Decimal) -> AccountActivityResult<()> {
         if !is_valid_amount(amount) {
             return Err(InvalidTransaction("deposit amount must be a positive number".into()));
         }
@@ -83,7 +85,7 @@ impl Account {
         Ok(())
     }
 
-    fn withdraw(&mut self, amount: f32) -> AccountActivityResult<()> {
+    fn withdraw(&mut self, amount: Decimal) -> AccountActivityResult<()> {
         if !is_valid_amount(amount) {
             Err(InvalidTransaction("withdrawal amount must be a positive number".into()))
         } else if amount > self.available {
@@ -95,7 +97,7 @@ impl Account {
         }
     }
 
-    fn hold(&mut self, amount: f32) -> AccountActivityResult<()> {
+    fn hold(&mut self, amount: Decimal) -> AccountActivityResult<()> {
         if !is_valid_amount(amount) {
             Err(InvalidTransaction("hold amount must be a positive number".into()))
         } else {
@@ -105,7 +107,7 @@ impl Account {
         }
     }
 
-    fn release(&mut self, amount: f32) -> AccountActivityResult<()> {
+    fn release(&mut self, amount: Decimal) -> AccountActivityResult<()> {
         if !is_valid_amount(amount) {
             Err(InvalidTransaction("release amount must be a positive number".into()))
         } else {
@@ -115,7 +117,7 @@ impl Account {
         }
     }
 
-    fn charge(&mut self, amount: f32) -> AccountActivityResult<()> {
+    fn charge(&mut self, amount: Decimal) -> AccountActivityResult<()> {
         if !is_valid_amount(amount) {
             Err(InvalidTransaction("chargeback amount must be a positive number".into()))
         } else {
@@ -208,6 +210,8 @@ impl Account {
 pub mod test_utils {
     use super::Account;
     use crate::ClientID;
+    use rust_decimal::Decimal;
+    use rust_decimal_macros::dec;
     use std::collections::HashMap;
 
     pub enum LockStatus {
@@ -218,9 +222,9 @@ pub mod test_utils {
     impl Account {
         pub fn with_values(
             client_id: ClientID,
-            available: f32,
-            held: f32,
-            total: f32,
+            available: Decimal,
+            held: Decimal,
+            total: Decimal,
             lock_status: LockStatus,
         ) -> Self {
             Self {
@@ -242,9 +246,9 @@ pub mod test_utils {
         fn default() -> Self {
             Self::with_values(
                 ClientID::default(),
-                0.0,
-                0.0,
-                0.0,
+                dec!(0.0),
+                dec!(0.0),
+                dec!(0.0),
                 LockStatus::Unlocked,
             )
         }
@@ -257,6 +261,7 @@ mod test_account_activities {
     use crate::account_activity::AccountActivity;
     use crate::transaction::TransactionID;
     use crate::ClientID;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn transactions_with_same_id_are_only_processed_once() {
@@ -264,12 +269,12 @@ mod test_account_activities {
         let deposit_a = AccountActivity::deposit(
             transaction_id,
             ClientID::default(),
-            100.0,
+            dec!(100.0),
         );
         let deposit_b = AccountActivity::deposit(
             transaction_id,
             ClientID::default(),
-            200.0,
+            dec!(200.0),
         );
 
         let mut account = Account::default();
@@ -278,9 +283,9 @@ mod test_account_activities {
         let result = account.transaction(deposit_b);
         assert!(result.is_err(), "Expected second deposit transaction to fail");
 
-        assert_eq!(account.available(), 100.0);
-        assert_eq!(account.held(), 0.0);
-        assert_eq!(account.total(), 100.0);
+        assert_eq!(account.available(), dec!(100.0));
+        assert_eq!(account.held(), dec!(0.0));
+        assert_eq!(account.total(), dec!(100.0));
     }
 
     #[test]
@@ -288,7 +293,7 @@ mod test_account_activities {
         let deposit = AccountActivity::deposit(
             TransactionID::default(),
             ClientID::default(),
-            100.0,
+            dec!(100.0),
         );
         let dispute = AccountActivity::dispute(
             deposit.transaction_id(),
@@ -300,9 +305,9 @@ mod test_account_activities {
 
         let result = account.transaction(dispute);
         assert!(result.is_ok(), "Expected dispute to succeed: {:?}: {:?}", dispute, result);
-        assert_eq!(account.available(), 0.0);
-        assert_eq!(account.held(), 100.0);
-        assert_eq!(account.total(), 100.0);
+        assert_eq!(account.available(), dec!(0.0));
+        assert_eq!(account.held(), dec!(100.0));
+        assert_eq!(account.total(), dec!(100.0));
     }
 
     #[test]
@@ -325,12 +330,12 @@ mod test_account_activities {
         let deposit_a = AccountActivity::deposit(
             TransactionID(0),
             client_id,
-            50.0,
+            dec!(50.0),
         );
         let deposit_b = AccountActivity::deposit(
             TransactionID(1),
             client_id,
-            50.0,
+            dec!(50.0),
         );
 
         let dispute_a = AccountActivity::dispute(
@@ -354,9 +359,9 @@ mod test_account_activities {
         assert!(result.is_ok(),
                 "Expected dispute to succeed: {:?}: {:?}", dispute_b, result);
 
-        assert_eq!(account.available(), 0.0);
-        assert_eq!(account.held(), 100.0);
-        assert_eq!(account.total(), 100.0);
+        assert_eq!(account.available(), dec!(0.0));
+        assert_eq!(account.held(), dec!(100.0));
+        assert_eq!(account.total(), dec!(100.0));
     }
 
     #[test]
@@ -364,7 +369,7 @@ mod test_account_activities {
         let deposit = AccountActivity::deposit(
             TransactionID::default(),
             ClientID::default(),
-            50.0,
+            dec!(50.0),
         );
         let dispute = AccountActivity::dispute(
             deposit.transaction_id(),
@@ -385,7 +390,7 @@ mod test_account_activities {
         let deposit = AccountActivity::deposit(
             TransactionID::default(),
             ClientID::default(),
-            50.0,
+            dec!(50.0),
         );
         let dispute = AccountActivity::dispute(
             deposit.transaction_id(),
@@ -402,8 +407,8 @@ mod test_account_activities {
 
         let result = account.transaction(resolve);
         assert!(result.is_ok(), "Expected resolution to succeed: {:?}: {:?}", resolve, result);
-        assert_eq!(account.available(), 50.0);
-        assert_eq!(account.held(), 0.0);
+        assert_eq!(account.available(), dec!(50.0));
+        assert_eq!(account.held(), dec!(0.0));
     }
 
     #[test]
@@ -422,7 +427,7 @@ mod test_account_activities {
         let deposit = AccountActivity::deposit(
             TransactionID::default(),
             ClientID::default(),
-            50.0,
+            dec!(50.0),
         );
         let dispute = AccountActivity::dispute(
             deposit.transaction_id(),
@@ -440,8 +445,8 @@ mod test_account_activities {
         let result = account.transaction(chargeback);
         assert!(result.is_ok(),
                 "Expected chargeback to succeed: {:?}: {:?}", chargeback, result);
-        assert_eq!(account.held(), 0.0);
-        assert_eq!(account.total(), 0.0);
+        assert_eq!(account.held(), dec!(0.0));
+        assert_eq!(account.total(), dec!(0.0));
     }
 
     #[test]
@@ -460,7 +465,7 @@ mod test_account_activities {
         let deposit = AccountActivity::deposit(
             TransactionID::default(),
             ClientID::default(),
-            50.0,
+            dec!(50.0),
         );
         let dispute = AccountActivity::dispute(
             deposit.transaction_id(),
@@ -484,10 +489,11 @@ mod test_account_activities {
 #[cfg(test)]
 mod test_accounting {
     use super::*;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn deposit_affects_funds() {
-        let amount = 100.0;
+        let amount = dec!(100.0);
 
         let mut account = Account::default();
 
@@ -501,55 +507,53 @@ mod test_accounting {
     fn deposit_with_invalid_value_fails() {
         let mut account = Account::default();
 
-        let lower_than_min = 1.0e-40_f32;
-        let invalid_values = [-1.0, lower_than_min, f32::NAN, f32::INFINITY];
+        let invalid_values = [dec!(-1.0)];
 
         for invalid_value in invalid_values {
             let result = account.deposit(invalid_value);
             assert!(result.is_err(),
                     "Expected deposit with invalid value to fail: {:?}", invalid_value);
-            assert_eq!(account.available(), 0.0);
-            assert_eq!(account.total(), 0.0);
+            assert_eq!(account.available(), dec!(0.0));
+            assert_eq!(account.total(), dec!(0.0));
         }
     }
 
     #[test]
     fn withdrawal_affects_funds() {
-        let amount = 100.0;
+        let amount = dec!(100.0);
 
         let mut account = Account::default();
         account.deposit(amount).expect("Test setup: deposit failed");
 
         let result = account.withdraw(amount);
         assert!(result.is_ok(), "Expected withdrawal to succeed: {:?}", result);
-        assert_eq!(account.available(), 0.0);
-        assert_eq!(account.total(), 0.0);
+        assert_eq!(account.available(), dec!(0.0));
+        assert_eq!(account.total(), dec!(0.0));
     }
 
     #[test]
     fn withdraw_with_invalid_value_fails() {
         let mut account = Account::default();
 
-        let lower_than_min = 1.0e-40_f32;
-        let invalid_values = [-1.0, lower_than_min, f32::NAN, f32::INFINITY];
+        let invalid_values = [dec!(-1.0)];
 
         for invalid_value in invalid_values {
             let result = account.withdraw(invalid_value);
             assert!(result.is_err(),
                     "Expected withdrawal with invalid value to fail: {:?}", invalid_value);
-            assert_eq!(account.available(), 0.0);
-            assert_eq!(account.total(), 0.0);
+            assert_eq!(account.available(), dec!(0.0));
+            assert_eq!(account.total(), dec!(0.0));
         }
     }
 
     #[test]
     fn withdraw_with_insufficient_funds_fails() {
-        let available_funds = 100.0;
+        let available_funds = dec!(100.0);
 
         let mut account = Account::default();
         account.deposit(available_funds).expect("Test setup: deposit failed");
 
-        let result = account.withdraw(available_funds + 0.1);
+        let result = account.withdraw(available_funds + dec!(0.1));
         assert!(result.is_err(), "Expected withdrawal exceeding available funds to fail");
         assert_eq!(account.available(), available_funds);
         assert_eq!(account.total(), available_funds);
@@ -557,14 +561,14 @@ mod test_accounting {
 
     #[test]
     fn hold_affects_funds() {
-        let amount = 100.0;
+        let amount = dec!(100.0);
 
         let mut account = Account::default();
         account.deposit(amount).expect("Test setup: deposit failed");
 
         let result = account.hold(amount);
         assert!(result.is_ok(), "Expected hold to succeed: {:?}", result);
-        assert_eq!(account.available(), 0.0);
+        assert_eq!(account.available(), dec!(0.0));
         assert_eq!(account.held(), amount);
         assert_eq!(account.total(), amount);
     }
@@ -573,22 +577,21 @@ mod test_accounting {
     fn hold_with_invalid_value_fails() {
         let mut account = Account::default();
 
-        let lower_than_min = 1.0e-40_f32;
-        let invalid_values = [-1.0, lower_than_min, f32::NAN, f32::INFINITY];
+        let invalid_values = [dec!(-1.0)];
 
         for invalid_value in invalid_values {
             let result = account.hold(invalid_value);
             assert!(result.is_err(),
                     "Expected hold with invalid value to fail: {:?}", invalid_value);
-            assert_eq!(account.available(), 0.0);
-            assert_eq!(account.held(), 0.0);
-            assert_eq!(account.total(), 0.0);
+            assert_eq!(account.available(), dec!(0.0));
+            assert_eq!(account.held(), dec!(0.0));
+            assert_eq!(account.total(), dec!(0.0));
         }
     }
 
     #[test]
     fn release_affects_funds() {
-        let amount = 100.0;
+        let amount = dec!(100.0);
 
         let mut account = Account::default();
         account.deposit(amount).expect("Test setup: deposit failed");
@@ -597,7 +600,7 @@ mod test_accounting {
         let result = account.release(amount);
         assert!(result.is_ok(), "Expected release to succeed: {:?}", result);
         assert_eq!(account.available(), amount);
-        assert_eq!(account.held(), 0.0);
+        assert_eq!(account.held(), dec!(0.0));
         assert_eq!(account.total(), amount);
     }
 
@@ -605,22 +608,21 @@ mod test_accounting {
     fn release_with_invalid_value_fails() {
         let mut account = Account::default();
 
-        let lower_than_min = 1.0e-40_f32;
-        let invalid_values = [-1.0, lower_than_min, f32::NAN, f32::INFINITY];
+        let invalid_values = [dec!(-1.0)];
 
         for invalid_value in invalid_values {
             let result = account.release(invalid_value);
             assert!(result.is_err(),
                     "Expected release with invalid value to fail: {:?}", invalid_value);
-            assert_eq!(account.available(), 0.0);
-            assert_eq!(account.held(), 0.0);
-            assert_eq!(account.total(), 0.0);
+            assert_eq!(account.available(), dec!(0.0));
+            assert_eq!(account.held(), dec!(0.0));
+            assert_eq!(account.total(), dec!(0.0));
         }
     }
 
     #[test]
     fn charge_back_affects_funds() {
-        let amount = 100.0;
+        let amount = dec!(100.0);
 
         let mut account = Account::default();
         account.deposit(amount).expect("Test setup: deposit failed");
@@ -628,25 +630,24 @@ mod test_accounting {
 
         let result = account.charge(amount);
         assert!(result.is_ok(), "Expected charge back to succeed: {:?}", result);
-        assert_eq!(account.available(), 0.0);
-        assert_eq!(account.held(), 0.0);
-        assert_eq!(account.total(), 0.0);
+        assert_eq!(account.available(), dec!(0.0));
+        assert_eq!(account.held(), dec!(0.0));
+        assert_eq!(account.total(), dec!(0.0));
     }
 
     #[test]
     fn charge_back_with_invalid_value_fails() {
         let mut account = Account::default();
 
-        let lower_than_min = 1.0e-40_f32;
-        let invalid_values = [-1.0, lower_than_min, f32::NAN, f32::INFINITY];
+        let invalid_values = [dec!(-1.0)];
 
         for invalid_value in invalid_values {
             let result = account.charge(invalid_value);
             assert!(result.is_err(),
                     "Expected charge_back with invalid value to fail: {:?}", invalid_value);
-            assert_eq!(account.available(), 0.0);
-            assert_eq!(account.held(), 0.0);
-            assert_eq!(account.total(), 0.0);
+            assert_eq!(account.available(), dec!(0.0));
+            assert_eq!(account.held(), dec!(0.0));
+            assert_eq!(account.total(), dec!(0.0));
         }
     }
 }

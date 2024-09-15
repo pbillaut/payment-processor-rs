@@ -1,6 +1,7 @@
 use crate::dispute::DisputeCase;
 use crate::transaction::{Transaction, TransactionID};
 use crate::ClientID;
+use rust_decimal::Decimal;
 use std::fmt::{Display, Formatter};
 use thiserror::Error;
 
@@ -78,11 +79,11 @@ pub enum AccountActivity {
 }
 
 impl AccountActivity {
-    pub fn deposit(transaction_id: TransactionID, client_id: ClientID, amount: f32) -> Self {
+    pub fn deposit(transaction_id: TransactionID, client_id: ClientID, amount: Decimal) -> Self {
         Self::Deposit(Transaction::new(transaction_id, client_id, amount))
     }
 
-    pub fn withdrawal(transaction_id: TransactionID, client_id: ClientID, amount: f32) -> Self {
+    pub fn withdrawal(transaction_id: TransactionID, client_id: ClientID, amount: Decimal) -> Self {
         Self::Withdrawal(Transaction::new(transaction_id, client_id, amount))
     }
 

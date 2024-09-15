@@ -34,14 +34,15 @@ mod tests {
     use super::*;
     use crate::account::{test_utils::LockStatus, Account};
     use crate::ClientID;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn serialize_account() {
         let account = Account::with_values(
             ClientID(101),
-            10.0,
-            20.0,
-            30.0,
+            dec!(10.0),
+            dec!(20.0),
+            dec!(30.0),
             LockStatus::Locked,
         );
         let expected = [
