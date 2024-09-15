@@ -89,14 +89,14 @@ mod tests {
             TestCase {
                 activities: vec![
                     Ok(AccountActivity::deposit(
-                        TransactionID::default(),
+                        TransactionID(1),
                         ClientID::default(),
                         10.0
                     )),
                     // The next record couldn't be parsed
                     Err(ParseError),
                     Ok(AccountActivity::withdrawal(
-                        TransactionID::default(),
+                        TransactionID(2),
                         ClientID::default(),
                         5.0
                     ))
@@ -120,7 +120,7 @@ mod tests {
             TestCase {
                 activities: vec![
                     Ok(AccountActivity::deposit(
-                        TransactionID::default(),
+                        TransactionID(1),
                         ClientID::default(),
                         10.0
                     )),
@@ -131,7 +131,7 @@ mod tests {
                         15.0
                     )),
                     Ok(AccountActivity::withdrawal(
-                        TransactionID::default(),
+                        TransactionID(2),
                         ClientID::default(),
                         10.0
                     )),

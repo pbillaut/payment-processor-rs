@@ -115,7 +115,7 @@ impl Account {
         }
     }
 
-    fn charge_back(&mut self, amount: f32) -> AccountActivityResult<()> {
+    fn charge(&mut self, amount: f32) -> AccountActivityResult<()> {
         if !is_valid_amount(amount) {
             Err(InvalidTransaction("chargeback amount must be a positive number".into()))
         } else {
@@ -151,7 +151,7 @@ impl Account {
         match self.dispute_cases.remove(transaction_id) {
             None => Ok(()),
             Some(amount) => {
-                self.charge_back(amount)?;
+                self.charge(amount)?;
                 self.lock();
                 Ok(())
             }
@@ -160,7 +160,7 @@ impl Account {
 
     fn record_transaction(&mut self, transaction: Transaction) -> AccountActivityResult<()> {
         match self.transaction_record.entry(transaction.id()) {
-            Entry::Occupied(_) => Err(FailedTransaction("transaction already processed".into())),
+            Entry::Occupied(_) => Err(FailedTransaction("transaction already recorded".into())),
             Entry::Vacant(entry) => {
                 entry.insert(transaction);
                 Ok(())
@@ -168,18 +168,28 @@ impl Account {
         }
     }
 
-    pub fn transaction(&mut self, transaction: AccountActivity) -> AccountActivityResult<()> {
+    /// Process an account activity, which could either be a transaction or a dispute activity.
+    ///
+    /// # Security
+    /// For auditing purposes, all [transactions](crate::transaction::Transaction) are logged, even
+    /// in cases where the transaction ultimately fails. This ensures that failed transactions are
+    /// not retried with altered payloads. If a transaction fails once, it will be recorded
+    /// alongside its ID and thus not executed again.
+    ///
+    /// [Dispute cases](crate::dispute::DisputeCase) are logged temporarily and retained only until
+    /// they are fully resolved.
+    pub fn transaction(&mut self, activity: AccountActivity) -> AccountActivityResult<()> {
         if self.is_locked() {
             return Err(FailedTransaction("account locked".into()));
         }
-        match transaction {
+        match activity {
             AccountActivity::Deposit(transaction) => {
-                self.deposit(transaction.amount())?;
-                self.record_transaction(transaction)
+                self.record_transaction(transaction)?;
+                self.deposit(transaction.amount())
             }
             AccountActivity::Withdrawal(transaction) => {
-                self.withdraw(transaction.amount())?;
-                self.record_transaction(transaction)
+                self.record_transaction(transaction)?;
+                self.withdraw(transaction.amount())
             }
             AccountActivity::Dispute(dispute_case) => {
                 self.initiate_dispute(dispute_case.id())
@@ -242,11 +252,36 @@ pub mod test_utils {
 }
 
 #[cfg(test)]
-mod test_transactions {
+mod test_account_activities {
     use super::Account;
     use crate::account_activity::AccountActivity;
     use crate::transaction::TransactionID;
     use crate::ClientID;
+
+    #[test]
+    fn transactions_with_same_id_are_only_processed_once() {
+        let transaction_id = TransactionID::default();
+        let deposit_a = AccountActivity::deposit(
+            transaction_id,
+            ClientID::default(),
+            100.0,
+        );
+        let deposit_b = AccountActivity::deposit(
+            transaction_id,
+            ClientID::default(),
+            200.0,
+        );
+
+        let mut account = Account::default();
+        account.transaction(deposit_a).expect("Test setup: deposit transaction failed");
+
+        let result = account.transaction(deposit_b);
+        assert!(result.is_err(), "Expected second deposit transaction to fail");
+
+        assert_eq!(account.available(), 100.0);
+        assert_eq!(account.held(), 0.0);
+        assert_eq!(account.total(), 100.0);
+    }
 
     #[test]
     fn dispute_affects_funds() {
@@ -591,7 +626,7 @@ mod test_accounting {
         account.deposit(amount).expect("Test setup: deposit failed");
         account.hold(amount).expect("Test setup: hold failed");
 
-        let result = account.charge_back(amount);
+        let result = account.charge(amount);
         assert!(result.is_ok(), "Expected charge back to succeed: {:?}", result);
         assert_eq!(account.available(), 0.0);
         assert_eq!(account.held(), 0.0);
@@ -606,7 +641,7 @@ mod test_accounting {
         let invalid_values = [-1.0, lower_than_min, f32::NAN, f32::INFINITY];
 
         for invalid_value in invalid_values {
-            let result = account.charge_back(invalid_value);
+            let result = account.charge(invalid_value);
             assert!(result.is_err(),
                     "Expected charge_back with invalid value to fail: {:?}", invalid_value);
             assert_eq!(account.available(), 0.0);
