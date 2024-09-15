@@ -1,12 +1,8 @@
-use crate::account::Account;
-use crate::account_activity::AccountActivity;
 use crate::processor::Processor;
 use crate::processors::csv::reader::CsvReader;
 use crate::processors::csv::writer::CsvWriter;
 use crate::processors::csv::CsvProcessorError;
-use std::collections::HashMap;
 use std::io::{Read, Write};
-use tracing::{error, warn};
 
 pub struct CsvProcessor;
 
@@ -24,31 +20,6 @@ impl Default for CsvProcessor {
 
 impl Processor for CsvProcessor {
     type Error = CsvProcessorError;
-
-    fn process_account_activity<I>(&self, activities: I) -> Vec<Account>
-    where
-        I: Iterator<Item=Result<AccountActivity, Self::Error>>,
-    {
-        let mut accounts = HashMap::new();
-        for transaction in activities {
-            match transaction {
-                Err(err) => error!("error parsing account activity {:?}", err),
-                Ok(transaction) => {
-                    let account = accounts
-                        .entry(transaction.client_id())
-                        .or_insert_with(|| Account::new(transaction.client_id()));
-                    if let Err(err) = account.transaction(transaction) {
-                        warn!(
-                            transaction_id = %transaction.transaction_id(),
-                            client_id = %transaction.client_id(),
-                            "error processing account activity: {}",err
-                        );
-                    }
-                }
-            }
-        }
-        accounts.into_values().collect()
-    }
 
     fn process<R, W>(&self, input: R, output: W) -> Result<(), Self::Error>
     where
