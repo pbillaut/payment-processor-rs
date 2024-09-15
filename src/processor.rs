@@ -2,7 +2,7 @@ use crate::account::Account;
 use crate::account_activity::AccountActivity;
 use std::collections::HashMap;
 use std::error::Error;
-use tracing::{error, warn};
+use tracing::warn;
 
 // TODO: This fn is public to be able to benchmark it. This should probably be handled with a bench 
 //       feature instead.
