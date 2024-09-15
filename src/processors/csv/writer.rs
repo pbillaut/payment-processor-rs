@@ -34,7 +34,6 @@ mod tests {
     use super::*;
     use crate::account::{test_utils::LockStatus, Account};
     use crate::ClientID;
-    use std::collections::HashMap;
 
     #[test]
     fn serialize_account() {
@@ -44,8 +43,6 @@ mod tests {
             20.0,
             30.0,
             LockStatus::Locked,
-            HashMap::new(),
-            HashMap::new(),
         );
         let expected = [
             "client,available,held,total,locked",

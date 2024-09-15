@@ -193,7 +193,6 @@ impl Account {
 #[cfg(test)]
 pub mod test_utils {
     use super::Account;
-    use crate::transaction::{Transaction, TransactionID};
     use crate::ClientID;
     use std::collections::HashMap;
 
@@ -209,8 +208,6 @@ pub mod test_utils {
             held: f32,
             total: f32,
             lock_status: LockStatus,
-            transaction_record: HashMap<TransactionID, Transaction>,
-            dispute_cases: HashMap<TransactionID, f32>,
         ) -> Self {
             Self {
                 client_id,
@@ -221,8 +218,8 @@ pub mod test_utils {
                     LockStatus::Locked => true,
                     LockStatus::Unlocked => false,
                 },
-                transaction_record,
-                dispute_cases,
+                dispute_cases: HashMap::new(),
+                transaction_record: HashMap::new(),
             }
         }
     }
@@ -235,8 +232,6 @@ pub mod test_utils {
                 0.0,
                 0.0,
                 LockStatus::Unlocked,
-                HashMap::new(),
-                HashMap::new(),
             )
         }
     }
