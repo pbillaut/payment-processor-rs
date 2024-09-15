@@ -10,6 +10,7 @@ keywords = ["experiment", "payment-processor"]
 categories = ["finance", "parser-implementations"]
 
 [dependencies]
+anyhow = "1.0"
 clap = { version = "4.5.17", features = ["derive"] }
 csv = "1.3.0"
 serde = { version = "1.0.210", features = ["derive"] }

@@ -1,8 +1,7 @@
 use crate::ParseResult;
 use criterion::{black_box, criterion_group, BatchSize, Criterion};
 use payment_processor::account_activity::AccountActivity;
-use payment_processor::processor::Processor;
-use payment_processor::processors::csv::CsvProcessor;
+use payment_processor::processor::process_activities;
 use payment_processor::transaction::TransactionID;
 use payment_processor::ClientID;
 
@@ -27,12 +26,11 @@ fn bench_process_transactions(c: &mut Criterion) {
         AccountActivity::chargeback(TransactionID(2), client_id_2),
         AccountActivity::withdrawal(TransactionID(4), client_id_2, 100.0),
     ];
-    let processor = CsvProcessor::new();
 
-    c.bench_function("CsvProcessor::process_account_activity [dispute process]", move |b| {
+    c.bench_function("process_activities [dispute process]", move |b| {
         b.iter_batched(
             || transactions.clone().into_iter().map(Ok).collect::<ParseResult>(),
-            |transactions| processor.process_account_activity(black_box(transactions.into_iter())),
+            |transactions| process_activities(black_box(transactions.into_iter())),
             BatchSize::SmallInput,
         )
     });
