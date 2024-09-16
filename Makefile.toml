@@ -1,0 +1,45 @@
+[env]
+BENCHES_DATA_DIR = "${CARGO_MAKE_WORKING_DIRECTORY}/benches/data"
+BUILD_PROFILE_PERF = "perf"
+
+# ------------------------------------------------------
+# Group: Memory Profiling
+# ------------------------------------------------------
+[tasks.build-perf]
+description = "Build the perf release to profile against"
+command = "cargo"
+args = ["build", "--profile", "${BUILD_PROFILE_PERF}"]
+
+[tasks.heaptrack]
+description = "Run heaptrack"
+dependencies = ["build-perf"]
+script = '''
+SIZE="${1:-10K}"
+TAG="${2:-$(date +"%Y-%m-%d_%H-%M-%S")}"
+
+if [ -z "${SIZE}" ] || [ -z "${TAG}" ]; then
+  echo "ERROR: Invalid or missing argument"
+  echo
+  echo "Usage:   cargo make mem-perf <SIZE> <TAG>"
+  echo "Example: cargo make mem-perf 1K optimized"
+  echo
+  exit 1
+fi
+
+SAMPLE_FILE="${BENCHES_DATA_DIR}/activities_${SIZE}.csv"
+if [ ! -f "$SAMPLE_FILE" ]; then
+  echo "ERROR: File '${SAMPLE_FILE}' does not exist."
+  echo
+  echo "Available sample files in '${DATA_DIR}':"
+  for file in ${BENCHES_DATA_DIR}/activities_*.csv; do
+    echo "• $(basename "$file")"
+  done
+  echo
+  exit 1
+fi
+
+OUTPUT_FILE="${CARGO_MAKE_WORKING_DIRECTORY}/heaptrack.${CARGO_MAKE_CRATE_NAME}.${SIZE}.${TAG}"
+BINARY="${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/${BUILD_PROFILE_PERF}/${CARGO_MAKE_CRATE_NAME}"
+
+heaptrack --output "${OUTPUT_FILE}" "${BINARY}" "${SAMPLE_FILE}"
+'''
