@@ -6,7 +6,7 @@ use crate::ClientID;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::collections::hash_map::Entry;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// An abstraction over the balances of a client.
 ///
@@ -56,7 +56,7 @@ pub struct Account {
     locked: bool,
 
     #[serde(skip)]
-    dispute_cases: HashMap<TransactionID, Decimal>,
+    dispute_cases: HashSet<TransactionID>,
 
     #[serde(skip)]
     transaction_record: HashMap<TransactionID, Transaction>,
@@ -70,7 +70,7 @@ impl Account {
             total: dec!(0.0),
             available: dec!(0.0),
             locked: false,
-            dispute_cases: HashMap::new(),
+            dispute_cases: HashSet::new(),
             transaction_record: HashMap::new(),
         }
     }
@@ -152,36 +152,33 @@ impl Account {
     }
 
     fn initiate_dispute(&mut self, transaction_id: TransactionID) -> AccountActivityResult<()> {
-        match self.dispute_cases.entry(transaction_id) {
-            Entry::Occupied(_) => Err(FailedDisputeCase("transaction already disputed".into())),
-            Entry::Vacant(entry) => {
-                match self.transaction_record.get(&transaction_id) {
-                    None => Ok(()),
-                    Some(transaction) => {
-                        entry.insert(transaction.amount());
-                        self.hold(transaction.amount())
-                    }
+        match self.dispute_cases.contains(&transaction_id) {
+            true => Err(FailedDisputeCase("transaction already disputed".into())),
+            false => match self.transaction_record.get(&transaction_id) {
+                None => Ok(()),
+                Some(transaction) => {
+                    self.dispute_cases.insert(transaction_id);
+                    self.hold(transaction.amount())
                 }
             }
         }
     }
 
     fn resolve_dispute(&mut self, transaction_id: &TransactionID) -> AccountActivityResult<()> {
-        match self.dispute_cases.remove(transaction_id) {
-            None => Ok(()),
-            Some(amount) => self.release(amount),
+        if let Some(transaction) = self.transaction_record.get(transaction_id) {
+            self.release(transaction.amount())?;
+            self.dispute_cases.remove(transaction_id);
         }
+        Ok(())
     }
 
     fn issue_chargeback(&mut self, transaction_id: &TransactionID) -> AccountActivityResult<()> {
-        match self.dispute_cases.remove(transaction_id) {
-            None => Ok(()),
-            Some(amount) => {
-                self.charge(amount)?;
-                self.lock();
-                Ok(())
-            }
+        if let Some(transaction) = self.transaction_record.get(transaction_id) {
+            self.charge(transaction.amount())?;
+            self.dispute_cases.remove(transaction_id);
+            self.lock();
         }
+        Ok(())
     }
 
     fn record_transaction(&mut self, transaction: Transaction) -> AccountActivityResult<()> {
@@ -227,7 +224,7 @@ pub mod test_utils {
     use crate::ClientID;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
-    use std::collections::HashMap;
+    use std::collections::{HashMap, HashSet};
 
     pub enum LockStatus {
         Locked,
@@ -251,7 +248,7 @@ pub mod test_utils {
                     LockStatus::Locked => true,
                     LockStatus::Unlocked => false,
                 },
-                dispute_cases: HashMap::new(),
+                dispute_cases: HashSet::new(),
                 transaction_record: HashMap::new(),
             }
         }
