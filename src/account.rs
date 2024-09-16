@@ -59,7 +59,7 @@ pub struct Account {
     dispute_cases: HashSet<TransactionID>,
 
     #[serde(skip)]
-    transaction_record: HashMap<TransactionID, Transaction>,
+    transaction_record: HashMap<TransactionID, Decimal>,
 }
 
 impl Account {
@@ -156,25 +156,25 @@ impl Account {
             true => Err(FailedDisputeCase("transaction already disputed".into())),
             false => match self.transaction_record.get(&transaction_id) {
                 None => Ok(()),
-                Some(transaction) => {
+                Some(&amount) => {
                     self.dispute_cases.insert(transaction_id);
-                    self.hold(transaction.amount())
+                    self.hold(amount)
                 }
             }
         }
     }
 
     fn resolve_dispute(&mut self, transaction_id: &TransactionID) -> AccountActivityResult<()> {
-        if let Some(transaction) = self.transaction_record.get(transaction_id) {
-            self.release(transaction.amount())?;
+        if let Some(&amount) = self.transaction_record.get(transaction_id) {
+            self.release(amount)?;
             self.dispute_cases.remove(transaction_id);
         }
         Ok(())
     }
 
     fn issue_chargeback(&mut self, transaction_id: &TransactionID) -> AccountActivityResult<()> {
-        if let Some(transaction) = self.transaction_record.get(transaction_id) {
-            self.charge(transaction.amount())?;
+        if let Some(&amount) = self.transaction_record.get(transaction_id) {
+            self.charge(amount)?;
             self.dispute_cases.remove(transaction_id);
             self.lock();
         }
@@ -185,7 +185,7 @@ impl Account {
         match self.transaction_record.entry(transaction.id()) {
             Entry::Occupied(_) => Err(FailedTransaction("transaction already recorded".into())),
             Entry::Vacant(entry) => {
-                entry.insert(transaction);
+                entry.insert(transaction.amount());
                 Ok(())
             }
         }
