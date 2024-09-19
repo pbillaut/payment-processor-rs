@@ -2,5 +2,9 @@
 
 .idea/
 
+# Profiling Tools
+heaptrack*.zst
+!docs/**/heaptrack*.zst
+
 flamegraph.svg
 profile.json

@@ -24,6 +24,11 @@ tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 criterion = { version = "0.5.1", features = ["html_reports"] }
 test-log = { version = "0.2.16", features = ["trace"] }
 
+[profile.perf]
+# Profile for memory profiling
+inherits = "release"
+debug = true
+
 [[bench]]
 name = "bench_main"
 harness = false
