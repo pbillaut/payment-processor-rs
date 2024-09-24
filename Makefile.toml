@@ -11,7 +11,8 @@ command = "cargo"
 args = ["build", "--profile", "${BUILD_PROFILE_PERF}"]
 
 [tasks.heaptrack]
-description = "Run heaptrack"
+description = "Profile memory usage with heaptrack (Linux)"
+condition = { platforms = ["linux"] }
 dependencies = ["build-perf"]
 script = '''
 SIZE="${1:-10K}"
@@ -41,5 +42,25 @@ fi
 OUTPUT_FILE="${CARGO_MAKE_WORKING_DIRECTORY}/heaptrack.${CARGO_MAKE_CRATE_NAME}.${SIZE}.${TAG}"
 BINARY="${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/${BUILD_PROFILE_PERF}/${CARGO_MAKE_CRATE_NAME}"
 
-heaptrack --output "${OUTPUT_FILE}" "${BINARY}" "${SAMPLE_FILE}"
+heaptrack --output "${OUTPUT_FILE}" "${BINARY}" --silent "${SAMPLE_FILE}"
+'''
+
+[tasks.instruments]
+description = "Profile memory usage with instruments (macOS)"
+condition = { platforms = ["mac"] }
+script = '''
+SIZE="${1:-10K}"
+SAMPLE_FILE="${BENCHES_DATA_DIR}/activities_${SIZE}.csv"
+if [ ! -f "$SAMPLE_FILE" ]; then
+  echo "ERROR: File '${SAMPLE_FILE}' does not exist."
+  echo
+  echo "Available sample files in '${DATA_DIR}':"
+  for file in ${BENCHES_DATA_DIR}/activities_*.csv; do
+    echo "• $(basename "$file")"
+  done
+  echo
+  exit 1
+fi
+
+cargo instruments --profile perf -t Allocations -- --silent "${SAMPLE_FILE}"
 '''

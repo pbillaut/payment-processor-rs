@@ -2,6 +2,28 @@
 
 A simple toy payment processor.
 
+## Profiling
+
+### Memory
+
+#### Linux
+
+To profile memory usage on Linux with [heaptrack][tool:heaptrack], run
+
+```shell
+cargo make heaptrack [1K|10K]
+```
+
+#### macOS
+
+To profile memory usage on macOS with [Instruments][tool:instruments],
+install [cargo-instruments][tool:cargo-instruments] and
+run
+
+```shell
+cargo make instruments [1K|10K]
+```
+
 ## A Note on Parsing
 
 In parsing a CSV file containing different types of records, such as transactions and dispute events, using separate
@@ -49,9 +71,14 @@ As above, since no specific performance target has been set, there is no strong 
 that rely on native floating-point types. The advantages provided by [`rust_decimal`][crate:rust_decimal], particularly
 in terms of precision and error avoidance, outweigh the potential performance gains from using floats.
 
-[type:decimal]: https://docs.rs/rust_decimal/latest/rust_decimal/struct.Decimal.html
-
 [crate:csv]: https://docs.rs/csv/latest
 
 [crate:rust_decimal]: https://docs.rs/rust_decimal/latest
 
+[tool:cargo-instruments]: https://crates.io/crates/cargo-instruments
+
+[tool:heaptrack]: https://github.com/KDE/heaptrack
+
+[tool:instruments]: https://help.apple.com/instruments/mac/current
+
+[type:decimal]: https://docs.rs/rust_decimal/latest/rust_decimal/struct.Decimal.html
